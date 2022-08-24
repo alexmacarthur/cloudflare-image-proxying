@@ -107,10 +107,17 @@ router.post("/api/event", async request => {
 const imageRewriter = new HTMLRewriter()
   .on('img', new AttributeRewriter('src'));
 
-router.get('/*', async (request) => {
-  const response = await fetch(request);
+router.get('/*', async (request, event) => {
+  let response = await caches.default.match(request);
 
-  return imageRewriter.transform(response);
+  if(!response) {
+    response = await fetch(request);
+    response = imageRewriter.transform(response);
+    const clonedResponse = new Response(response.body, response);
+    event.waitUntil(caches.default.put(request, clonedResponse.clone()));
+  }
+
+  return response;
 });
 
 addEventListener("fetch", event => {
