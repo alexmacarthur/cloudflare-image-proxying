@@ -6,42 +6,6 @@ interface AppEnv {
 
 const router = Router();
 
-router.routes.push([
-  "GET",
-  /(.*)transform-image\/src/,
-  [
-    async (request, event) => {
-      let response = (await caches.default.match(
-        request as Request
-      )) as Response;
-
-      if (!response) {
-        const src = request.url.match(/.+transform-image\/src\/(.+)/)?.[1];
-
-        if (!src) throw new Error("No image source found!");
-
-        response = await fetch(src);
-
-        const clonedResponse: Response = new Response(response.body, response);
-
-        // one year
-        clonedResponse.headers.set("Cache-Control", "public, max-age=31560000");
-        clonedResponse.headers.set(
-          "X-Special-Message",
-          "Thanks for visiting Alex's site!"
-        );
-
-        event.waitUntil(
-          caches.default.put(request as Request, clonedResponse.clone())
-        );
-        return clonedResponse;
-      }
-
-      return response;
-    }
-  ]
-]);
-
 /**
  * Cache static assets.
  */
@@ -156,6 +120,8 @@ export default {
     env: AppEnv,
     context: ExecutionContext
   ): Promise<Response> {
-    return router.handle(request, env, context);
+    context.passThroughOnException();
+
+    return router.handle(request, env, context).then(response => response);
   }
 };
