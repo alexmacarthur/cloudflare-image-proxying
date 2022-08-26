@@ -13,7 +13,7 @@ router.routes.push([
   "GET",
   /.+?\.(css|woff2|svg)/,
   [
-    async (request, event) => {
+    async (request, _env, ctx) => {
       let response = await caches.default.match(request as Request);
 
       if (!response) {
@@ -27,7 +27,7 @@ router.routes.push([
           "Thanks for visiting Alex's site!"
         );
 
-        event.waitUntil(
+        ctx.waitUntil(
           caches.default.put(request as Request, clonedResponse.clone())
         );
 
@@ -39,7 +39,7 @@ router.routes.push([
   ]
 ]);
 
-router.get("/js/numbers.js", async (request, ctx) => {
+router.get("/js/numbers.js", async (request, _env, ctx) => {
   let response = (await caches.default.match(request as Request)) as Response;
 
   if (!response) {
