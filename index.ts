@@ -34,7 +34,7 @@ router.get(
 
     let headers = {
       "Content-Type": obj.httpMetadata!.contentType as string,
-      "Cache-Control": "public, max-age=31560001",
+      "Cache-Control": "public, max-age=31560000",
     };
 
     const response = new Response(obj?.body, { headers });
