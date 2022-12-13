@@ -4,12 +4,20 @@ interface AppEnv {
   MACARTHUR_ME: R2Bucket;
 }
 
+type MethodType = "GET" | "POST";
+interface IRequest extends Request {
+  method: MethodType;
+  url: string;
+  optional?: string;
+  params: { [key: string]: string };
+}
+
 const router = Router();
 
 router.get(
   "/proxy/:imageId",
-  async (request: Request, env: AppEnv, ctx: ExecutionContext) => {
-    const { imageId } = (request as any).params;
+  async (request: IRequest, env: AppEnv, ctx: ExecutionContext) => {
+    const { imageId } = request.params;
     const cacheKey = new Request(request.url.toString(), request);
     const cachedImage = await caches.default.match(cacheKey);
 
@@ -18,31 +26,16 @@ router.get(
       return cachedImage;
     }
 
-    console.log(`Cache MISS for ${imageId}`);
-
-    const obj = await env.MACARTHUR_ME.get(decodeURIComponent(imageId));
+    const obj = await env.MACARTHUR_ME.get(imageId);
 
     if (!obj) {
       return new Response(`Image not found: ${imageId}`, { status: 404 });
     }
 
-    let acceptedHeaders: Record<string, string | undefined> = {
-      "Content-Type": obj.httpMetadata.contentType,
-      "Content-Encoding": obj.httpMetadata.contentEncoding,
-      "Content-Disposition": obj.httpMetadata.contentDisposition,
-      "Content-Language": obj?.httpMetadata.contentLanguage,
-      Expires: obj.httpMetadata.cacheExpiry?.toUTCString()
+    let headers = {
+      "Content-Type": obj.httpMetadata!.contentType as string,
+      "Cache-Control": "public, max-age=31560001",
     };
-
-    let filteredHeaders = Object.entries(acceptedHeaders).filter(
-      ([, headerValue]) => !!headerValue
-    );
-    let headers = Object.fromEntries(filteredHeaders) as Record<
-      string,
-      string | string
-    >;
-
-    headers["Cache-Control"] = "public, max-age=31560000";
 
     const response = new Response(obj?.body, { headers });
 
@@ -60,6 +53,6 @@ export default {
   ): Promise<Response> {
     context.passThroughOnException();
 
-    return router.handle(request, env, context).then(response => response);
-  }
+    return router.handle(request, env, context).then((response) => response);
+  },
 };
