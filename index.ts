@@ -1,15 +1,7 @@
-import { Router } from "itty-router";
+import { Router, IRequest } from "itty-router";
 
 interface AppEnv {
   MACARTHUR_ME: R2Bucket;
-}
-
-type MethodType = "GET" | "POST";
-interface IRequest extends Request {
-  method: MethodType;
-  url: string;
-  optional?: string;
-  params: { [key: string]: string };
 }
 
 const router = Router();
@@ -42,6 +34,13 @@ router.get(
     ctx.waitUntil(caches.default.put(cacheKey, response.clone()));
 
     return response;
+  }
+);
+
+router.get(
+  "/color",
+  async (request: IRequest, env: AppEnv, ctx: ExecutionContext) => {
+    return fetch("https://color-macarthur-me.netlify.app");
   }
 );
 
