@@ -37,11 +37,8 @@ router.get(
   }
 );
 
-router.get(
-  "/color",
-  async (request: IRequest, env: AppEnv, ctx: ExecutionContext) => {
-    return fetch("https://color-macarthur-me.netlify.app");
-  }
+router.get("/color/*", async () =>
+  fetch("https://color-macarthur-me.netlify.app")
 );
 
 export default {
