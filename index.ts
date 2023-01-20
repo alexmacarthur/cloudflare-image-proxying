@@ -41,6 +41,10 @@ router.get("/color/*", async () =>
   fetch("https://color-macarthur-me.netlify.app")
 );
 
+router.get("/slide-element/*", async () =>
+  fetch("https://alexmacarthur.github.io/slide-element")
+);
+
 export default {
   async fetch(
     request: Request,
