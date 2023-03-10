@@ -37,6 +37,36 @@ router.get(
   }
 );
 
+router.get(
+  "/proxy-image/*",
+  async (request: IRequest, env: AppEnv, ctx: ExecutionContext) => {
+    const cacheKey = new Request(request.url.toString(), request);
+    const cachedImage = await caches.default.match(cacheKey);
+    const imagePath = request.url.replace(/.*\/proxy-image\//, "");
+
+    if (cachedImage) {
+      console.log(`Cache HIT for ${imagePath}`);
+      return cachedImage;
+    }
+
+    const originImageResponse = await fetch(
+      `https://macarthur-me-content.fly.dev/${imagePath}`
+    );
+    const modifiedResponse = new Response(originImageResponse.body, {
+      status: originImageResponse.status,
+      statusText: originImageResponse.statusText,
+      headers: {
+        ...originImageResponse.headers,
+        "Cache-Control": "public, max-age=31560000",
+      },
+    });
+
+    ctx.waitUntil(caches.default.put(cacheKey, modifiedResponse.clone()));
+
+    return modifiedResponse;
+  }
+);
+
 router.get("/color/*", async () =>
   fetch("https://color-macarthur-me.netlify.app")
 );
