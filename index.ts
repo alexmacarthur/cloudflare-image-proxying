@@ -1,45 +1,43 @@
 import { Router, IRequest } from "itty-router";
 
-interface AppEnv {
-  MACARTHUR_ME: R2Bucket;
-}
+interface AppEnv {}
 
 const router = Router();
 
 router.get(
-  "/proxy/:imageId",
-  async (request: IRequest, env: AppEnv, ctx: ExecutionContext) => {
-    const { imageId } = request.params;
+  "proxy-public/*",
+  async (request: IRequest, _env: AppEnv, ctx: ExecutionContext) => {
     const cacheKey = new Request(request.url.toString(), request);
-    const cachedImage = await caches.default.match(cacheKey);
+    const cachedAsset = await caches.default.match(cacheKey);
+    const assetPath = request.url.replace(/.*\/proxy-public\//, "");
 
-    if (cachedImage) {
-      console.log(`Cache HIT for ${imageId}`);
-      return cachedImage;
+    if (cachedAsset) {
+      console.log(`Cache HIT for ${assetPath}`);
+      return cachedAsset;
     }
 
-    const obj = await env.MACARTHUR_ME.get(imageId);
+    const originImageResponse = await fetch(
+      `https://macarthur.me/${assetPath}`
+    );
 
-    if (!obj) {
-      return new Response(`Image not found: ${imageId}`, { status: 404 });
-    }
+    const modifiedResponse = new Response(originImageResponse.body, {
+      status: originImageResponse.status,
+      statusText: originImageResponse.statusText,
+      headers: {
+        ...originImageResponse.headers,
+        "Cache-Control": "public, max-age=31560000",
+      },
+    });
 
-    let headers = {
-      "Content-Type": obj.httpMetadata!.contentType as string,
-      "Cache-Control": "public, max-age=31560000",
-    };
+    ctx.waitUntil(caches.default.put(cacheKey, modifiedResponse.clone()));
 
-    const response = new Response(obj?.body, { headers });
-
-    ctx.waitUntil(caches.default.put(cacheKey, response.clone()));
-
-    return response;
+    return modifiedResponse;
   }
 );
 
 router.get(
   "/proxy-image/*",
-  async (request: IRequest, env: AppEnv, ctx: ExecutionContext) => {
+  async (request: IRequest, _env: AppEnv, ctx: ExecutionContext) => {
     const cacheKey = new Request(request.url.toString(), request);
     const cachedImage = await caches.default.match(cacheKey);
     const imagePath = request.url.replace(/.*\/proxy-image\//, "");
