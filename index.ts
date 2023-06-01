@@ -4,6 +4,8 @@ interface AppEnv {}
 
 const router = Router();
 
+const YEAR_IN_SECONDS = 31560000;
+
 router.get(
   "proxy-public/*",
   async (request: IRequest, _env: AppEnv, ctx: ExecutionContext) => {
@@ -25,7 +27,7 @@ router.get(
       statusText: originImageResponse.statusText,
       headers: {
         ...originImageResponse.headers,
-        "Cache-Control": "public, max-age=31560000",
+        "Cache-Control": `public, max-age=${YEAR_IN_SECONDS}, immutable`,
       },
     });
 
@@ -55,7 +57,7 @@ router.get(
       statusText: originImageResponse.statusText,
       headers: {
         ...originImageResponse.headers,
-        "Cache-Control": "public, max-age=31560000",
+        "Cache-Control": `public, max-age=${YEAR_IN_SECONDS}, immutable`,
       },
     });
 
