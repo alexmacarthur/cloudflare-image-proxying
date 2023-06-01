@@ -4,10 +4,10 @@
   "version": "1.0.0",
   "description": "package for creating workers templates",
   "scripts": {
-    "start": "wrangler dev",
+    "start": "wrangler dev --remote",
     "test": "echo \"Error: no test specified\" && exit 1",
     "format": "prettier --write '**/*.{ts,md}'",
-    "publish": "wrangler publish"
+    "publish": "wrangler deploy"
   },
   "author": "Alex MacArthur",
   "license": "ISC",
