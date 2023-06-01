@@ -7,7 +7,7 @@ const router = Router();
 const YEAR_IN_SECONDS = 31560000;
 
 router.get(
-  "proxy-public/*",
+  "/proxy-public/*",
   async (request: IRequest, _env: AppEnv, ctx: ExecutionContext) => {
     const cacheKey = new Request(request.url.toString(), request);
     const cachedAsset = await caches.default.match(cacheKey);
