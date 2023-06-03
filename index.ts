@@ -1,6 +1,8 @@
 import { Router, IRequest } from "itty-router";
 
-interface AppEnv {}
+interface AppEnv {
+  MACARTHUR_ME: R2Bucket;
+}
 
 const router = Router();
 
@@ -8,7 +10,7 @@ const YEAR_IN_SECONDS = 31560000;
 
 router.get(
   "/proxy-public/*",
-  async (request: IRequest, _env: AppEnv, ctx: ExecutionContext) => {
+  async (request: IRequest, env: AppEnv, ctx: ExecutionContext) => {
     const cacheKey = new Request(request.url.toString(), request);
     const cachedAsset = await caches.default.match(cacheKey);
     const assetPath = request.url.replace(/.*\/proxy-public\//, "");
@@ -39,7 +41,7 @@ router.get(
 
 router.get(
   "/proxy-image/*",
-  async (request: IRequest, _env: AppEnv, ctx: ExecutionContext) => {
+  async (request: IRequest, env: AppEnv, ctx: ExecutionContext) => {
     const cacheKey = new Request(request.url.toString(), request);
     const cachedImage = await caches.default.match(cacheKey);
     const imagePath = request.url.replace(/.*\/proxy-image\//, "");
@@ -49,21 +51,37 @@ router.get(
       return cachedImage;
     }
 
-    const originImageResponse = await fetch(
-      `https://macarthur-me-content.fly.dev/${imagePath}`
-    );
-    const modifiedResponse = new Response(originImageResponse.body, {
-      status: originImageResponse.status,
-      statusText: originImageResponse.statusText,
-      headers: {
-        ...originImageResponse.headers,
-        "Cache-Control": `public, max-age=${YEAR_IN_SECONDS}, immutable`,
-      },
-    });
+    let obj = await env.MACARTHUR_ME.get(imagePath);
 
-    ctx.waitUntil(caches.default.put(cacheKey, modifiedResponse.clone()));
+    if(!obj) {
+      const optimizedImageResponse = await fetch(
+        "https://macarthur-me-api.vercel.app/api/optimize-image",
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            url: `https://macarthur-me-content.fly.dev/${imagePath}`,
+          }),
+        }
+      );
 
-    return modifiedResponse;
+      obj = await env.MACARTHUR_ME.put(imagePath, optimizedImageResponse.body, {
+        httpMetadata: optimizedImageResponse.headers,
+      }) as R2ObjectBody;
+    }
+
+    let headers = {
+      "Content-Type": obj.httpMetadata!.contentType as string,
+      "Cache-Control": `public, max-age=${YEAR_IN_SECONDS}, immutable`,
+    };
+
+    const newResponse = new Response(obj?.body, { headers });
+
+    ctx.waitUntil(caches.default.put(cacheKey, newResponse.clone()));
+
+    return newResponse;
   }
 );
 

@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "itty-router": "^4.0.9",
-    "serverless-cloudflare-workers": "^1.2.0"
+    "serverless-cloudflare-workers": "^1.2.0",
+    "sharp": "^0.32.1"
   }
 }
