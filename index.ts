@@ -8,6 +8,12 @@ const router = Router();
 
 const YEAR_IN_SECONDS = 31560000;
 
+router.get("/optimize/*", async (request: IRequest, env: AppEnv) => {
+  const assetUrl = request.url.replace(/.*\/optimize\//, "");
+
+  return new Response(assetUrl);
+});
+
 router.get(
   "/proxy-public/*",
   async (request: IRequest, env: AppEnv, ctx: ExecutionContext) => {
@@ -51,15 +57,24 @@ router.get(
       return cachedImage;
     }
 
+    const cacheHeader = `public, max-age=${YEAR_IN_SECONDS}, immutable`;
+    let newResponse: Response;
     let obj = await env.MACARTHUR_ME.get(imagePath);
 
-    if(!obj) {
+    if (obj) {
+      let headers = {
+        "Content-Type": obj.httpMetadata!.contentType as string,
+        "Cache-Control": cacheHeader,
+      };
+
+      newResponse = new Response(obj.body, { headers });
+    } else {
       const optimizedImageResponse = await fetch(
         "https://macarthur-me-api.vercel.app/api/optimize-image",
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             url: `https://macarthur-me-content.fly.dev/${imagePath}`,
@@ -67,17 +82,23 @@ router.get(
         }
       );
 
-      obj = await env.MACARTHUR_ME.put(imagePath, optimizedImageResponse.body, {
-        httpMetadata: optimizedImageResponse.headers,
-      }) as R2ObjectBody;
+      const clonedResponse = optimizedImageResponse.clone();
+
+      obj = (await env.MACARTHUR_ME.put(
+        imagePath,
+        optimizedImageResponse.body,
+        {
+          httpMetadata: optimizedImageResponse.headers,
+        }
+      )) as R2ObjectBody;
+
+      let headers = {
+        "Content-Type": clonedResponse.headers.get("Content-Type") as string,
+        "Cache-Control": cacheHeader,
+      };
+
+      newResponse = new Response(clonedResponse?.body, { headers });
     }
-
-    let headers = {
-      "Content-Type": obj.httpMetadata!.contentType as string,
-      "Cache-Control": `public, max-age=${YEAR_IN_SECONDS}, immutable`,
-    };
-
-    const newResponse = new Response(obj?.body, { headers });
 
     ctx.waitUntil(caches.default.put(cacheKey, newResponse.clone()));
 

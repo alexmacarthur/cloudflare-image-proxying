@@ -4,3 +4,4 @@ worker/
 package-lock.json
 wrangler.toml
 .DS_Store
+.wrangler
